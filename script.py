@@ -134,7 +134,10 @@ def lambda_handler(event, context):
             csv_file.flush() 
             for address in addresses:
                 PublicIp=address['PublicIp']
-                AllocationId=address['AllocationId']
+                try:
+                    AllocationId=address['AllocationId']
+                except:
+                    AllocationId="empty"
                 Domain=address['Domain']
                 csv_file.write("%s,%s,%s\n"%(PublicIp,AllocationId,Domain))
                 csv_file.flush() 
@@ -158,7 +161,10 @@ def lambda_handler(event, context):
             DBInstanceIdentifier = dbinstance['DBInstanceIdentifier']
             DBInstanceClass = dbinstance['DBInstanceClass']
             DBInstanceStatus = dbinstance['DBInstanceStatus']
-            DBName = dbinstance['DBName']
+            try:
+                DBName = dbinstance['DBName']
+            except:
+                DBName = "empty"
             csv_file.write("%s,%s,%s,%s\n" %(DBInstanceIdentifier,DBInstanceStatus,DBName,DBInstanceClass))
             csv_file.flush()
         
