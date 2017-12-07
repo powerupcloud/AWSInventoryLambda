@@ -9,6 +9,6 @@ A simple python script to save your AWS inventory details to a CSV file, store i
 Just use the script.py as Lambda function code and schedule a job. You may also schedule it as a standalone job without using lambda. For more details about how to schedule this as a job using lambda, read this [step by step guide](http://blog.powerupcloud.com/2016/02/07/aws-inventory-details-in-csv-using-lambda/)
 
 
-#AWS System Manager can help in setting up the inventory with more detailed information.
+#AWS System Manager can help in setting up the inventory with more detailed information. Please refer AWS System Manager.
 
 
