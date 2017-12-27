@@ -1,6 +1,7 @@
 import boto3
 import collections
-import datetime
+from datetime import datetime
+from datetime import timedelta
 import csv
 from time import gmtime, strftime
 import smtplib
@@ -16,6 +17,7 @@ identity = sts.get_caller_identity()
 ownerId = identity['Account']
 
 #Environment Variables
+LIST_SNAPSHOTS_WITHIN_THE_LAST_N_DAYS=os.environ["LIST_SNAPSHOTS_WITHIN_THE_LAST_N_DAYS"]
 SES_SMTP_USER=os.environ["SES_SMTP_USER"]
 SES_SMTP_PASSWORD=os.environ["SES_SMTP_PASSWORD"]
 S3_INVENTORY_BUCKET=os.environ["S3_INVENTORY_BUCKET"]
@@ -129,21 +131,28 @@ def lambda_handler(event, context):
         ec2snapshot = ec2con.describe_snapshots(OwnerIds=[
             ownerId,
         ],).get('Snapshots',[])
-        ec2snapshotlist = len(ec2snapshot)
-        if ec2snapshotlist > 0:
-            csv_file.write("%s,%s,%s,%s,%s\n" % ('','','','',''))
-            csv_file.write("%s,%s\n"%('EC2 SNAPSHOT',regname))
-            csv_file.write("%s,%s,%s,%s,%s\n" % ('SnapshotId','VolumeId','StartTime','VolumeSize','Description'))
-            csv_file.flush()
-
-        for snapshots in ec2snapshot:
-            SnapshotId=snapshots['SnapshotId']
-            VolumeId=snapshots['VolumeId']
-            StartTime=snapshots['StartTime']
-            VolumeSize=snapshots['VolumeSize']
-            Description=snapshots['Description']
-            csv_file.write("%s,%s,%s,%s,%s\n" % (SnapshotId,VolumeId,StartTime,VolumeSize,Description))
-            csv_file.flush()
+        
+        snapshots_counter = 0
+        for snapshot in ec2snapshot:
+            snapshot_id = snapshot['SnapshotId']
+            snapshot_state = snapshot['State']
+            tz_info = snapshot['StartTime'].tzinfo
+            # Snapshots that were not taken within the last configured days do not qualify for auditing
+            timedelta_days=-int(LIST_SNAPSHOTS_WITHIN_THE_LAST_N_DAYS)
+            if snapshot['StartTime'] > datetime.now(tz_info) + timedelta(days=timedelta_days):
+                if snapshots_counter == 0:
+                    csv_file.write("%s,%s,%s,%s,%s\n" % ('','','','',''))
+                    csv_file.write("%s,%s\n"%('EC2 SNAPSHOT',regname))
+                    csv_file.write("%s,%s,%s,%s,%s\n" % ('SnapshotId','VolumeId','StartTime','VolumeSize','Description'))
+                    csv_file.flush()
+                snapshots_counter += 1
+                SnapshotId=snapshot['SnapshotId']
+                VolumeId=snapshot['VolumeId']
+                StartTime=snapshot['StartTime']
+                VolumeSize=snapshot['VolumeSize']
+                Description=snapshot['Description']
+                csv_file.write("%s,%s,%s,%s,%s\n" % (SnapshotId,VolumeId,StartTime,VolumeSize,Description))
+                csv_file.flush()
 
         #boto3 library ec2 API describe addresses page
         #http://boto3.readthedocs.org/en/latest/reference/services/ec2.html#EC2.Client.describe_addresses
@@ -154,7 +163,6 @@ def lambda_handler(event, context):
             csv_file.write("%s,%s\n"%('EIPS INSTANCE',regname))
             csv_file.write("%s,%s,%s,%s\n"%('PublicIp','AllocationId','Domain','InstanceId'))
             csv_file.flush()
-
             for address in addresses:
                 PublicIp=address['PublicIp']
                 try:
@@ -162,7 +170,10 @@ def lambda_handler(event, context):
                 except:
                     AllocationId="empty"
                 Domain=address['Domain']
-                instanceId=address['InstanceId']
+                if 'InstanceId' in address:
+                    instanceId=address['InstanceId']
+                else:
+                    instanceId='empty'
                 csv_file.write("%s,%s,%s,%s\n"%(PublicIp,AllocationId,Domain,instanceId))
                 csv_file.flush()
 
