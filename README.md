@@ -10,4 +10,9 @@ Just use the script.py as Lambda function code and schedule a job. You may also 
 
 
 
+# Update
+
+Use AWS System Manager for creating the Inventory
+
+
 
