@@ -276,6 +276,33 @@ def lambda_handler(event, context):
             csv_file.write("%s,%s,%s,%s\n" % (LoadBalancerName,DNSName,CanonicalHostedZoneName,CanonicalHostedZoneNameID))
             csv_file.flush()
 
+        #IAM connection beginning
+        iam = boto3.client('iam', region_name=reg)
+
+        #boto3 library IAM API
+        #http://boto3.readthedocs.io/en/latest/reference/services/iam.html
+        csv_file.write("%s,%s,%s,%s\n" % ('','','',''))
+        csv_file.write("%s,%s\n"%('IAM',regname))
+        csv_file.write("%s,%s\n" % ('User','Policies'))
+        csv_file.flush()
+        users = iam.list_users()['Users']
+        for user in users:
+            user_name = user['UserName']
+            policies = ''
+            user_policies = iam.list_user_policies(UserName=user_name)["PolicyNames"]
+            for user_policy in user_policies:
+                if(len(policies) > 0):
+                    policies += ";"
+                policies += user_policy
+            attached_user_policies = iam.list_attached_user_policies(UserName=user_name)["AttachedPolicies"]
+            for attached_user_policy in attached_user_policies:
+                if(len(policies) > 0):
+                    policies += ";"
+                policies += attached_user_policy['PolicyName']
+            csv_file.write("%s,%s\n" % (user_name, policies))
+            csv_file.flush()
+
+
     def mail(fromadd,to, subject, text, attach):
        msg = MIMEMultipart()
        msg['From'] = fromadd
@@ -303,4 +330,3 @@ def lambda_handler(event, context):
     s3.Object(S3_INVENTORY_BUCKET, filename).put(Body=open(filepath, 'rb'))
     #Send Inventory
     mail(MAIL_FROM, MAIL_TO, MAIL_SUBJECT, MAIL_BODY, filepath)
-
