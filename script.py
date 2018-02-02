@@ -200,8 +200,8 @@ def lambda_handler(event, context):
                 if idx > 0:
                     ipRangesStr += '; '
                 ipRangesStr += ipRange['CidrIp']
-                csv_file.write("%s,%s,%s,%s,%s,%s\n"%(groupName,groupType,ipProtocol,fromPort,toPort,ipRangesStr))
-                csv_file.flush()
+            csv_file.write("%s,%s,%s,%s,%s,%s\n"%(groupName,groupType,ipProtocol,fromPort,toPort,ipRangesStr))
+            csv_file.flush()
 
         #boto3 library ec2 API describe security groups page
         #http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.Client.describe_security_groups
