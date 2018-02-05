@@ -71,37 +71,41 @@ def lambda_handler(event, context):
 
         for instance in instances:
             state=instance['State']['Name']
+            Instancename = 'N/A'
+            if 'Tags' in instance:
+                    for tags in instance['Tags']:
+                        key = tags['Key']
+                        if key == 'Name' :
+                            Instancename=tags['Value']
             if state =='running':
-                for tags in instance['Tags']:
-                    Instancename= tags['Value']
-                    key= tags['Key']
-                    if key == 'Name' :
-                        instanceid=instance['InstanceId']
-                        instancetype=instance['InstanceType']
-                        launchtime =instance['LaunchTime']
-                        Placement=instance['Placement']['AvailabilityZone']
-                        securityGroups = instance['SecurityGroups']
-                        securityGroupsStr = ''
-                        for idx, securityGroup in enumerate(securityGroups):
-                            if idx > 0:
-                                securityGroupsStr += '; '
-                            securityGroupsStr += securityGroup['GroupName']
-                        csv_file.write("%s,%s,%s,%s,%s,%s,%s\n"% (instanceid,state,Instancename,instancetype,launchtime,Placement,securityGroupsStr))
-                        csv_file.flush()
+                instanceid=instance['InstanceId']
+                instancetype=instance['InstanceType']
+                launchtime =instance['LaunchTime']
+                Placement=instance['Placement']['AvailabilityZone']
+                securityGroups = instance['SecurityGroups']
+                securityGroupsStr = ''
+                for idx, securityGroup in enumerate(securityGroups):
+                    if idx > 0:
+                        securityGroupsStr += '; '
+                    securityGroupsStr += securityGroup['GroupName']
+                csv_file.write("%s,%s,%s,%s,%s,%s,%s\n"% (instanceid,state,Instancename,instancetype,launchtime,Placement,securityGroupsStr))
+                csv_file.flush()
 
         for instance in instances:
             state=instance['State']['Name']
+            Instancename = 'N/A'
+            if 'Tags' in instance:
+                    for tags in instance['Tags']:
+                        key = tags['Key']
+                        if key == 'Name' :
+                            Instancename=tags['Value']
             if state =='stopped':
-                for tags in instance['Tags']:
-                    Instancename= tags['Value']
-                    key= tags['Key']
-                    if key == 'Name' :
-                        instanceid=instance['InstanceId']
-                        instancetype=instance['InstanceType']
-                        launchtime =instance['LaunchTime']
-                        Placement=instance['Placement']['AvailabilityZone']
-                        csv_file.write("%s,%s,%s,%s,%s,%s\n"%(instanceid,state,Instancename,instancetype,launchtime,Placement))
-                        csv_file.flush()
+                instanceid=instance['InstanceId']
+                instancetype=instance['InstanceType']
+                launchtime =instance['LaunchTime']
+                Placement=instance['Placement']['AvailabilityZone']
+                csv_file.write("%s,%s,%s,%s,%s,%s\n"%(instanceid,state,Instancename,instancetype,launchtime,Placement))
+                csv_file.flush()
 
         #boto3 library ec2 API describe volumes page
         #http://boto3.readthedocs.org/en/latest/reference/services/ec2.html#EC2.Client.describe_volumes
@@ -196,8 +200,8 @@ def lambda_handler(event, context):
                 if idx > 0:
                     ipRangesStr += '; '
                 ipRangesStr += ipRange['CidrIp']
-                csv_file.write("%s,%s,%s,%s,%s,%s\n"%(groupName,groupType,ipProtocol,fromPort,toPort,ipRangesStr))
-                csv_file.flush()
+            csv_file.write("%s,%s,%s,%s,%s,%s\n"%(groupName,groupType,ipProtocol,fromPort,toPort,ipRangesStr))
+            csv_file.flush()
 
         #boto3 library ec2 API describe security groups page
         #http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.Client.describe_security_groups
@@ -226,8 +230,6 @@ def lambda_handler(event, context):
                 for ipPermissionEgress in ipPermissionsEgress:
                     groupType = 'egress'
                     printSecGroup (groupType, ipPermissionEgress)
-
-
 
         #RDS Connection beginning
         rdscon = boto3.client('rds',region_name=reg)
@@ -302,26 +304,25 @@ def lambda_handler(event, context):
             csv_file.write("%s,%s\n" % (user_name, policies))
             csv_file.flush()
 
-
     def mail(fromadd,to, subject, text, attach):
-       msg = MIMEMultipart()
-       msg['From'] = fromadd
-       msg['To'] = to
-       msg['Subject'] = subject
-       msg.attach(MIMEText(text))
-       part = MIMEBase('application', 'octet-stream')
-       part.set_payload(open(attach, 'rb').read())
-       Encoders.encode_base64(part)
-       part.add_header('Content-Disposition','attachment; filename="%s"' % os.path.basename(attach))
-       msg.attach(part)
-       mailServer = smtplib.SMTP("email-smtp.us-east-1.amazonaws.com", 587)
-       mailServer.ehlo()
-       mailServer.starttls()
-       mailServer.ehlo()
-       mailServer.login(SES_SMTP_USER, SES_SMTP_PASSWORD)
-       mailServer.sendmail(fromadd, to, msg.as_string())
-       # Should be mailServer.quit(), but that crashes...
-       mailServer.close()
+        msg = MIMEMultipart()
+        msg['From'] = fromadd
+        msg['To'] = to
+        msg['Subject'] = subject
+        msg.attach(MIMEText(text))
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(open(attach, 'rb').read())
+        Encoders.encode_base64(part)
+        part.add_header('Content-Disposition','attachment; filename="%s"' % os.path.basename(attach))
+        msg.attach(part)
+        mailServer = smtplib.SMTP("email-smtp.us-east-1.amazonaws.com", 587)
+        mailServer.ehlo()
+        mailServer.starttls()
+        mailServer.ehlo()
+        mailServer.login(SES_SMTP_USER, SES_SMTP_PASSWORD)
+        mailServer.sendmail(fromadd, to, msg.as_string())
+        # Should be mailServer.quit(), but that crashes...
+        mailServer.close()
 
     date_fmt = strftime("%Y_%m_%d", gmtime())
     #Give your file path
