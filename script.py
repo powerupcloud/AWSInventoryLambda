@@ -44,6 +44,36 @@ def lambda_handler(event, context):
     filename ='AWS_Resources_' + date_fmt + '.csv'
     csv_file = open(filepath,'w+')
 
+
+    #IAM connection beginning - THIS Step should run only once not for every region:https://aws.amazon.com/iam/faqs/
+    iam = boto3.client('iam')
+    #No region is needed since running it from lambda fixes it
+
+    #boto3 library IAM API
+    #http://boto3.readthedocs.io/en/latest/reference/services/iam.html
+    csv_file.write("%s,%s,%s,%s\n" % ('','','',''))
+    csv_file.write("%s,%s\n"%('IAM',regname))
+    csv_file.write("%s,%s\n" % ('User','Policies'))
+    csv_file.flush()
+    users = iam.list_users()['Users']
+    for user in users:
+        user_name = user['UserName']
+        policies = ''
+        user_policies = iam.list_user_policies(UserName=user_name)["PolicyNames"]
+        for user_policy in user_policies:
+            if(len(policies) > 0):
+                policies += ";"
+            policies += user_policy
+        attached_user_policies = iam.list_attached_user_policies(UserName=user_name)["AttachedPolicies"]
+        for attached_user_policy in attached_user_policies:
+            if(len(policies) > 0):
+                policies += ";"
+            policies += attached_user_policy['PolicyName']
+        #In case you need to write this at the end of the CSV make sure to move the 2 lines from below before mail function
+        csv_file.write("%s,%s\n" % (user_name, policies))
+        csv_file.flush()
+
+
     #boto3 library ec2 API describe region page
     #http://boto3.readthedocs.org/en/latest/reference/services/ec2.html#EC2.Client.describe_regions
     regions = ec.describe_regions().get('Regions',[] )
@@ -135,7 +165,7 @@ def lambda_handler(event, context):
         ec2snapshot = ec2con.describe_snapshots(OwnerIds=[
             ownerId,
         ],).get('Snapshots',[])
-        
+
         snapshots_counter = 0
         for snapshot in ec2snapshot:
             snapshot_id = snapshot['SnapshotId']
@@ -278,31 +308,6 @@ def lambda_handler(event, context):
             csv_file.write("%s,%s,%s,%s\n" % (LoadBalancerName,DNSName,CanonicalHostedZoneName,CanonicalHostedZoneNameID))
             csv_file.flush()
 
-        #IAM connection beginning
-        iam = boto3.client('iam', region_name=reg)
-
-        #boto3 library IAM API
-        #http://boto3.readthedocs.io/en/latest/reference/services/iam.html
-        csv_file.write("%s,%s,%s,%s\n" % ('','','',''))
-        csv_file.write("%s,%s\n"%('IAM',regname))
-        csv_file.write("%s,%s\n" % ('User','Policies'))
-        csv_file.flush()
-        users = iam.list_users()['Users']
-        for user in users:
-            user_name = user['UserName']
-            policies = ''
-            user_policies = iam.list_user_policies(UserName=user_name)["PolicyNames"]
-            for user_policy in user_policies:
-                if(len(policies) > 0):
-                    policies += ";"
-                policies += user_policy
-            attached_user_policies = iam.list_attached_user_policies(UserName=user_name)["AttachedPolicies"]
-            for attached_user_policy in attached_user_policies:
-                if(len(policies) > 0):
-                    policies += ";"
-                policies += attached_user_policy['PolicyName']
-            csv_file.write("%s,%s\n" % (user_name, policies))
-            csv_file.flush()
 
     def mail(fromadd,to, subject, text, attach):
         msg = MIMEMultipart()
