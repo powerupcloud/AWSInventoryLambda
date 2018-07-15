@@ -1,6 +1,6 @@
 # AWSInventoryLambda
 
-##What?
+## What?
 
 A simple python script to save your AWS inventory details to a CSV file, store it on S3 and trigger an email.
 
